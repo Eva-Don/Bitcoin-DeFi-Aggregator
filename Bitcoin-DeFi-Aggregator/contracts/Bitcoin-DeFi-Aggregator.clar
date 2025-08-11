@@ -375,3 +375,52 @@
     (ok current-batch-id)
   )
 )
+
+;; Get risk score for a protocol
+(define-read-only (get-protocol-risk-score (protocol-id uint))
+  (let ((protocol (map-get? protocols { protocol-id: protocol-id })))
+    (if (is-some protocol)
+      (ok (get risk-score (unwrap-panic protocol)))
+      err-protocol-not-whitelisted
+    )
+  )
+)
+
+;; Calculate weighted risk for user's portfolio
+(define-read-only (calculate-user-portfolio-risk (user principal))
+  (ok u50)  ;; Simplified implementation - would calculate based on user positions
+)
+
+;; Get protocol statistics
+(define-read-only (get-protocol-stats (protocol-id uint))
+  (let ((protocol (map-get? protocols { protocol-id: protocol-id })))
+    (if (is-some protocol)
+      (ok (unwrap-panic protocol))
+      err-protocol-not-whitelisted
+    )
+  )
+)
+
+;; Get user positions across all protocols
+(define-read-only (get-user-positions (user principal))
+  (ok true)  ;; Simplified - would return comprehensive user position data
+)
+
+;; Get user strategy allocations
+(define-read-only (get-user-strategy-allocations (user principal))
+  (ok true)  ;; Simplified - would return user's strategy allocations
+)
+
+(define-constant err-flash-loan-not-repaid (err u123))
+
+(define-map flash-loans
+  { loan-id: uint }
+  {
+    borrower: principal,
+    token-id: uint,
+    amount: uint,
+    fee: uint,
+    block-borrowed: uint,
+    repaid: bool
+  }
+)
