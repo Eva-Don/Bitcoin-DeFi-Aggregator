@@ -57,3 +57,86 @@
   { user: principal, token-id: uint }
   { total-amount: uint }
 )
+
+;; Yield strategy types
+(define-map yield-strategies
+  { strategy-id: uint }
+  {
+    name: (string-ascii 64),
+    description: (string-ascii 256),
+    risk-level: uint,  ;; 1-5, where 1 is lowest risk and 5 is highest risk
+    enabled: bool,
+    target-yield: uint, ;; Target APY in basis points
+    min-deposit: uint,  ;; Minimum deposit required
+    max-deposit: uint,  ;; Maximum deposit allowed
+    rebalance-frequency: uint  ;; How often the strategy rebalances (in blocks)
+  }
+)
+
+
+;; User strategy allocations
+(define-map user-strategies
+  { user: principal, strategy-id: uint }
+  { amount: uint }
+)
+
+;; Track protocol statistics for historical data
+(define-map protocol-stats-daily
+  { protocol-id: uint, day: uint }
+  {
+    avg-yield: uint,
+    total-liquidity: uint,
+    txn-count: uint,
+    unique-users: uint
+  }
+)
+
+;; Route cache to optimize gas usage
+(define-map route-cache
+  { from-token: uint, to-token: uint, amount: uint }
+  {
+    best-route: (list 10 uint),  ;; List of protocol IDs to route through
+    expected-output: uint,
+    calculated-at-block: uint
+  }
+)
+
+;; Protocol fee settings
+(define-data-var protocol-fee-bps uint u10)  ;; 0.1% default fee
+(define-data-var fee-recipient principal contract-owner)
+
+;; Protocol counters
+(define-data-var next-protocol-id uint u1)
+(define-data-var next-token-id uint u1)
+(define-data-var next-strategy-id uint u1)
+
+;; Contract status
+(define-data-var contract-paused bool false)
+
+;; Governance variables
+(define-data-var governance-token principal .btc-defi-gov-token)
+(define-data-var proposal-threshold uint u100000000) ;; Minimum tokens needed to submit proposal
+
+(define-public (add-protocol (name (string-ascii 64)) (protocol-address principal) (risk-score uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (< risk-score u101) err-invalid-risk-score)
+    
+    (let ((protocol-id (var-get next-protocol-id)))
+      (map-set protocols
+        { protocol-id: protocol-id }
+        {
+          name: name,
+          address: protocol-address,
+          enabled: true,
+          risk-score: risk-score,
+          current-yield: u0,
+          liquidity: u0,
+          volume-24h: u0
+        }
+      )
+      (var-set next-protocol-id (+ protocol-id u1))
+      (ok protocol-id)
+    )
+  )
+)
