@@ -319,3 +319,59 @@
     (ok (simulate-swap from-token to-token amount protocol-id))
   )
 )
+
+;; Update statistics after a swap
+(define-private (update-swap-stats (from-token uint) (to-token uint) (input-amount uint) (output-amount uint))
+  (let (
+    (protocol-id (unwrap-panic (element-at (get best-route (unwrap-panic (map-get? route-cache 
+      { from-token: from-token, to-token: to-token, amount: input-amount }))) u0)))
+    (protocol (unwrap-panic (map-get? protocols { protocol-id: protocol-id })))
+    (current-volume (get volume-24h protocol))
+  )
+    (map-set protocols
+      { protocol-id: protocol-id }
+      (merge protocol { volume-24h: (+ current-volume input-amount) })
+    )
+    true
+  )
+)
+
+;; Rebalance a strategy (admin function)
+(define-public (rebalance-strategy (strategy-id uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (not (var-get contract-paused)) (err u116))
+    
+    (let ((strategy (unwrap! (map-get? yield-strategies { strategy-id: strategy-id }) (err u115))))
+      ;; In a real implementation, this would:
+      ;; 1. Analyze current allocations across protocols
+      ;; 2. Calculate optimal allocations based on current yields and risk parameters
+      ;; 3. Execute transactions to rebalance funds
+      
+      ;; For this example, we'll just return success
+      (ok true)
+    )
+  )
+)
+
+
+;; Data structure for batch swap operations
+(define-data-var batch-id uint u0)
+
+(define-map batch-operations
+  { batch-id: uint, operation-id: uint }
+  {
+    from-token: uint,
+    to-token: uint,
+    amount: uint,
+    min-output: uint
+  }
+)
+
+;; Create a new batch
+(define-public (create-batch)
+  (let ((current-batch-id (var-get batch-id)))
+    (var-set batch-id (+ current-batch-id u1))
+    (ok current-batch-id)
+  )
+)
