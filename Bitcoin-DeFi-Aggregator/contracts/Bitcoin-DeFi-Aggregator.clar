@@ -140,3 +140,37 @@
     )
   )
 )
+
+(define-public (toggle-protocol (protocol-id uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    
+    (let ((protocol (unwrap! (map-get? protocols { protocol-id: protocol-id }) err-protocol-not-whitelisted)))
+      (map-set protocols
+        { protocol-id: protocol-id }
+        (merge protocol { enabled: (not (get enabled protocol)) })
+      )
+      (ok (not (get enabled protocol)))
+    )
+  )
+)
+
+(define-public (add-token (name (string-ascii 64)) (symbol (string-ascii 10)) (decimals uint) (token-contract principal))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    
+    (let ((token-id (var-get next-token-id)))
+      (map-set supported-tokens
+        { token-id: token-id }
+        {
+          name: name,
+          symbol: symbol,
+          decimals: decimals,
+          token-contract: token-contract
+        }
+      )
+      (var-set next-token-id (+ token-id u1))
+      (ok token-id)
+    )
+  )
+)
